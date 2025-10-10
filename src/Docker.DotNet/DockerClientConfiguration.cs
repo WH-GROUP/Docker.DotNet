@@ -53,21 +53,28 @@ public class DockerClientConfiguration : IDisposable
         {
             scheme = "Http";
         }
-        
-        // Try to find a loaded handler factory that matches the scheme and Docker.DotNet
-        var factoryType = AppDomain.CurrentDomain.GetAssemblies()
-        .Where(a => a.FullName.Contains("Docker.DotNet", StringComparison.OrdinalIgnoreCase))
-        .SelectMany(a => a.GetTypes())
-        .FirstOrDefault(t =>
+
+        // Try to find a handler factory in base directory that matches the scheme and Docker.DotNet
+        var filenameOfFactoryAssembly = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll")
+            .FirstOrDefault(a =>
+                a.ToLower().Contains("Docker.DotNet".ToLower())
+                && a.ToLower().Contains(scheme.ToLower()));
+
+        if (filenameOfFactoryAssembly == null)
+        {
+            throw new InvalidOperationException($"No Docker handler factory assembly found for scheme '{scheme}'. Please reference at least one handler package (e.g., NPipe, Unix, NativeHttp, LegacyHttp).");
+        }
+
+        var factoryAssembly = Assembly.LoadFile(filenameOfFactoryAssembly);
+
+        var factoryType = factoryAssembly.GetTypes().FirstOrDefault(t =>
             typeof(IDockerHandlerFactory).IsAssignableFrom(t) &&
-            !t.IsInterface && !t.IsAbstract &&
-            (t.Name.Contains(scheme, StringComparison.OrdinalIgnoreCase) ||
-             t.Namespace?.Contains(scheme, StringComparison.OrdinalIgnoreCase) == true)
+            !t.IsInterface && !t.IsAbstract
         );
 
         if (factoryType == null)
         {
-            throw new InvalidOperationException($"No Docker handler factory implementation found for scheme '{scheme}'. Please reference at least one handler package (e.g., NPipe, Unix, NativeHttp, LegacyHttp).");
+            throw new InvalidOperationException($"No Docker handler factory implementation found for scheme '{scheme}' in assembly '{factoryAssembly.FullName}'.");
         }
 
         var factory = (IDockerHandlerFactory)Activator.CreateInstance(factoryType);
