@@ -7,35 +7,13 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-    services:
-      # Docker without TLS (plain TCP) !DEPRECATED! with next docker release
-      docker-no-tls:
-        image: docker:28.1-dind
-        env:
-          DOCKER_TLS_CERTDIR: ""
-        ports:
-          - 2375:2375
-        options: >-
-          --privileged
-
-      # Docker with TLS (secure TCP)
-      docker-tls:
-        image: docker:28.1-dind
-        env:
-          DOCKER_TLS_CERTDIR: /certs
-        ports:
-          - 2376:2376
-        options: >-
-          --privileged
-        volumes:
-          - ${{ github.workspace }}/certs:/certs
-
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         framework:
           - net8.0
           - net9.0
+          - net10.0
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,7 +22,7 @@ jobs:
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9.x
+          dotnet-version: 10.x
       - name: Build
         run: dotnet build -c Release --framework ${{ matrix.framework }}
         working-directory: test
