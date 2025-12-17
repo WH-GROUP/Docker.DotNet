@@ -18,4 +18,7 @@
     <Using Include="System.Threading" />
     <Using Include="System.Threading.Tasks" />
   </ItemGroup>
+    <PropertyGroup>
+    <NoWarn>CA1822</NoWarn>
+  </PropertyGroup>
 </Project>
